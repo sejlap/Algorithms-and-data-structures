@@ -1,0 +1,100 @@
+#include <iostream>
+#include <vector>
+#include <algorithm>
+using namespace std;
+
+void pomocna(vector<int> &a,int x){
+    vector<int>izlazni(a.size());
+    int broji[100] = {};
+    for(int i=0; i<a.size(); i++)
+        broji[(a[i]/x) %10]++;
+    for(int i=1; i<10; i++)
+        broji[i]+= broji[i-1];
+    for(int i=a.size()-1; i>=0; i--) {
+        izlazni[broji[(a[i]/x)%10] - 1]=a[i];
+        broji[(a[i] / x) % 10]--;
+    }
+    for(int i=0; i<a.size(); i++)
+        a[i]=izlazni[i];
+}
+void radixSort(vector<int> &a){
+    int max=a[0];
+    for(int i=1; i<a.size(); i++) {
+        if(a[i] > max) max=a[i];
+    }
+    for(int x=1; max/x>0; x*=10)
+        pomocna(a,x);
+}
+
+void popravidolje(vector<int> &a, int i,int velicina){
+    while(i<velicina/2 || i>=velicina) {
+        int lijevo = 2*i+1;
+        int desno = 2*i+2;
+        if(desno<velicina && a[desno]>a[lijevo] ) lijevo=desno;
+        if(a[i]>a[lijevo]) return;
+        int tmp=a[i];
+        a[i]=a[lijevo];
+        a[lijevo]=tmp;
+        i=lijevo;
+    }
+}
+
+void stvoriGomilu(vector<int> &a){
+    for(int i=a.size()/2; i>=0; i--)
+        popravidolje(a,i,a.size());
+}
+
+void popravigore(vector<int> &a, int i){
+    while(i!=0 && a[i] > a[(i-1)/2]) {
+        int pomocni=a[i];
+        a[i] = a[(i-1)/2];
+        a[(i-1)/2]=pomocni;
+        i= (i-1)/2;
+    }
+}
+
+void umetniUGomilu(vector<int> &a, int umetnuti, int &velicina){
+    velicina++;
+    int kapacitet=a.size();
+    if(velicina > kapacitet)  a.resize(velicina);
+    a[velicina-1]=umetnuti;
+    popravigore(a,velicina-1);
+}
+
+int izbaciPrvi(vector<int> &a, int &velicina){
+    if(velicina == 0) throw("Gomila je prazna");
+    velicina--;
+    int pomocni=a[0];
+    a[0]=a[velicina];
+    a[velicina]=pomocni;
+    if(velicina!=0) popravidolje(a,0,velicina);
+    return pomocni;
+}
+
+void gomilaSort(vector<int> &a){
+    stvoriGomilu(a);
+    for(int i=a.size()-1; i>=1; i--) {
+        int tmp=a[0];
+        a[0]=a[i];
+        a[i]=tmp;
+        popravidolje(a,0,i);
+    }
+}
+
+int main()
+{
+
+    vector<int> a;
+    int velicina=0;
+    umetniUGomilu(a,5,velicina);
+    umetniUGomilu(a,4435,velicina);
+    umetniUGomilu(a,75,velicina);
+    umetniUGomilu(a,235,velicina);
+    umetniUGomilu(a,25,velicina);
+    umetniUGomilu(a,45,velicina);
+    umetniUGomilu(a,35,velicina);
+    for(int i=0; i<a.size(); i++)
+    cout<<a[i]<<" ";
+    
+    return 0;
+}
