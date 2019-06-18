@@ -1,0 +1,393 @@
+#include <iostream>
+#include <stdexcept>
+template <typename Tip>
+class Lista{
+public:
+    Lista() {};
+    virtual ~Lista() {};
+    virtual int brojElemenata() const =0;
+    virtual Tip &trenutni()=0;
+    virtual Tip trenutni() const=0;
+    virtual bool prethodni()=0;
+    virtual bool sljedeci()=0;
+    virtual void pocetak()=0;
+    virtual void kraj()=0;
+    virtual void obrisi()=0;
+    virtual void dodajIspred(const Tip& el)=0;
+    virtual void dodajIza(const Tip& el)=0;
+    virtual Tip& operator[](int indeks)=0;
+    virtual Tip operator[](int indeks) const=0;
+};
+
+template<typename Tip>
+class DvostrukaLista : public Lista<Tip>{
+    
+struct Cvor{
+    Tip element;
+    Cvor *sljedec;
+    Cvor *prethodnik;
+    Cvor(const Tip element,Cvor *sljedec,Cvor *prethodnik) : element(element),sljedec(sljedec), prethodnik(prethodnik)  {};
+};
+    int duzina;
+    Cvor *pocetni;
+    Cvor *zavrsetak;
+    Cvor *tekuci;
+public:
+
+DvostrukaLista() : pocetni(nullptr), zavrsetak(nullptr), tekuci(nullptr), duzina(0) {}
+DvostrukaLista(const DvostrukaLista &dlista){
+    pocetni=0; zavrsetak=0; duzina=0;
+    Cvor *p(dlista.pocetni);
+    while(p!=0){
+        Dodaj(p->element);
+        p=p->sljedec;
+    }
+}
+bool Dodaj(const Tip &element){
+    Cvor *pomocni= new Cvor(element,nullptr,nullptr);
+    if(duzina==0) pocetni=zavrsetak=pomocni;
+    else{
+        zavrsetak->sljedec=pomocni;
+        pomocni->prethodnik=zavrsetak;
+        zavrsetak=pomocni;
+    }
+    duzina++;
+    return true;
+}
+~DvostrukaLista(){
+    Cvor *pom=pocetni;
+    for(int i=0; i<duzina; i++){
+        Cvor *p=pom;
+        pom=pom->sljedec;
+        delete p;
+    }
+    pocetni=0; zavrsetak=0; tekuci=0; duzina=0;
+}
+
+DvostrukaLista &operator=(const DvostrukaLista &dlista){
+    if(&dlista!=this){
+        Cvor *pom=pocetni;
+        for(int i=0; i<duzina; i++){
+            Cvor *p=pom;
+            pom=pom->sljedec;
+            delete p;
+        }
+        pocetni=0; zavrsetak=0; tekuci=0; duzina=0;
+        Cvor *p=dlista.pocetni;
+        while(p!=0){
+            Dodaj(p->element);
+           p=p->sljedec;
+        }
+    }
+    return *this;
+}
+int brojElemenata() const { return duzina; }
+
+Tip trenutni() const{
+    if(duzina==0) throw std::domain_error("Lista je prazna");
+    else return tekuci->element;
+}
+
+Tip &trenutni(){
+    if(duzina==0) throw std::domain_error("Lista je prazna");
+    else return tekuci->element;
+}
+bool prethodni(){
+    if(duzina==0) throw std::domain_error("Lista je prazna");
+    else if(tekuci==pocetni) return false;
+    else {
+        tekuci=tekuci->prethodnik;
+        return true;
+    }
+}
+bool sljedeci(){
+    if(duzina==0) throw std::domain_error("Lista je prazna");
+    else if(tekuci==zavrsetak) return false;
+    else{
+        tekuci=tekuci->sljedec;
+        return true;
+    }
+}
+void pocetak(){
+    if(duzina==0) throw std::domain_error("Lista je prazna");
+    tekuci=pocetni;
+}
+void kraj(){
+    if(duzina==0) throw std::domain_error("Lista je prazna");
+    tekuci=zavrsetak;
+}
+void dodajIspred(const Tip &el){
+    if(duzina==0){
+        Cvor *novi=new Cvor(el,nullptr,nullptr);
+        pocetni=zavrsetak=tekuci=novi;
+    }
+    else if(tekuci == pocetni){
+        Cvor *novi=new Cvor(el,nullptr,nullptr);
+        novi->sljedec=tekuci;
+        tekuci->prethodnik=novi;
+        pocetni=novi;
+    }
+    else {
+        Cvor *novi=new Cvor(el,nullptr,nullptr);
+        Cvor *pom=tekuci;
+        prethodni();
+        novi->sljedec=pom;
+        pom->prethodnik=novi;
+        tekuci->sljedec=novi;
+        novi->prethodnik=tekuci;
+        tekuci=pom;
+    }
+    duzina++;
+}
+void dodajIza(const Tip &el){
+    if(duzina==0) {
+        Cvor *novi= new Cvor(el,nullptr,nullptr);
+        pocetni=zavrsetak=tekuci=novi;
+    }
+    else if(tekuci==zavrsetak){
+        Cvor *novi=new Cvor(el,nullptr,nullptr);
+        tekuci->sljedec=novi;
+        novi->prethodnik=tekuci;
+        zavrsetak=novi;
+    }
+    else{
+        Cvor *novi=new Cvor(el,nullptr,nullptr);
+        Cvor *pom=tekuci->sljedec;
+        novi->sljedec = pom;
+        tekuci->sljedec = novi;
+        novi->prethodnik=tekuci;
+        pom->prethodnik=novi;
+    }
+    duzina++;
+}
+void obrisi(){
+    if(duzina==0) throw std::domain_error("Lista je prazna");
+    else if(duzina==1){
+        delete tekuci;
+        pocetni=0; zavrsetak=0; tekuci=0;
+    }
+    else if(tekuci==pocetni){
+        pocetni=pocetni->sljedec;
+        delete tekuci;
+        tekuci=pocetni;
+    }
+    else if(tekuci==zavrsetak){
+        prethodni();
+        delete zavrsetak;
+        zavrsetak=tekuci;
+    }
+    else{
+        Cvor *p1=tekuci->prethodnik;
+        Cvor *p2=tekuci->sljedec;
+        p1->sljedec=p2;
+        p2->prethodnik=p1;
+        delete tekuci;
+        tekuci=p2;
+    }
+    duzina--;
+}
+
+Tip &operator[](int indeks){
+    if(indeks<0 || indeks>duzina) throw std::domain_error("Izuzetak");
+    else{
+        int i=0;
+        Cvor *p=pocetni;
+        while(i<indeks){
+            p=p->sljedec;
+            i++;
+    }
+    return p->element;
+    }
+}
+
+    Tip operator [](int indeks)const {
+        if(indeks<0 || indeks>duzina) throw std::domain_error("Izuzetak");
+        else{
+            int i=0;
+            Cvor *p=pocetni;
+            while(i<indeks){
+                p=p->sljedec;
+                i++;
+        }
+        return p->element;
+        }
+    }
+    
+template <class DvostrukaLista> friend class Iterator;
+};
+
+template <typename Tip>
+class Iterator {
+   const DvostrukaLista<Tip> *l;
+   typename DvostrukaLista<Tip>::Cvor*t;
+public:
+    
+    Iterator(const DvostrukaLista<Tip> &dlista){//kopirajuci konstruktor za Dvostruku listu
+        t=dlista.t;
+    
+    }
+    Iterator(const Lista<Tip> &lista){  //kopirajuci konstruktor za listu
+        l = (DvostrukaLista<Tip>*) &lista;
+        t=l->pocetni;
+    }
+
+    int brojElemenata() const { return l->duzina; }
+    Tip trenutni() const{
+        if(l->duzina==0) throw std::domain_error("Lista je prazna");
+        return t->element;
+    }
+    bool sljedeci(){
+        if(l->duzina==0) throw std::domain_error("Lista je prazna");
+        if(t==l->zavrsetak) return false;
+        else{
+            t=t->sljedec;
+            return true;
+        }
+    }
+    bool prethodni(){
+        if(l->duzina==0) throw std::domain_error("Lista je prazna");
+        if(t==l->pocetni) return false;
+        else{
+            t=t->prethodnik;
+            return true;
+        }
+    }
+    void pocetak(){
+        if(l->duzina==0) throw std::domain_error("Lista je prazna");
+        t=l->pocetni;
+    }
+    void kraj(){
+        if(l->duzina==0) throw std::domain_error("Lista je prazna");
+        t=l->zavrsetak;
+    }
+};
+//ako se koristi[] nece biti optimalni rezultati zato uvodimo novu klasu Iterator
+template <typename Tip>
+Tip dajMaksimum(const Lista<Tip> &n){
+   Iterator<Tip> it(n);
+   it.pocetak();
+   Tip max=it.trenutni();
+   it.sljedeci();
+   for(int i=1; i<n.brojElemenata(); i++){
+       if(it.trenutni()>max) max=it.trenutni();
+       it.sljedeci();
+   }
+    return max;
+}
+
+bool maxi(){
+    DvostrukaLista<int> dlista;
+    dlista.dodajIspred(25);
+    dlista.dodajIspred(98);
+    dlista.dodajIspred(15);
+    dlista.dodajIza(45);
+    if(dajMaksimum(dlista)==98) return true;
+    return false;
+}
+
+bool brojEl(){
+    DvostrukaLista<int> dlista;
+    dlista.dodajIspred(14);
+    dlista.dodajIspred(74);
+    dlista.dodajIspred(17);
+    if(dlista.brojElemenata()==3) return true;
+    return false;
+}
+
+bool trenutniElement(){
+    DvostrukaLista<int> dl;
+    dl.dodajIza(11);
+    dl.dodajIza(17);
+    dl.trenutni();
+    if(dl.trenutni()==11) return true;
+    return false;
+}
+
+bool sljedeciElement(){
+    DvostrukaLista<int> dlista;
+    dlista.dodajIspred(8);
+    dlista.dodajIspred(16);
+    dlista.sljedeci();
+    dlista.dodajIza(15);
+    if(dlista.sljedeci()) return true;
+    return false;
+}
+
+bool prethodniElement(){
+    DvostrukaLista<int> dlista;
+    dlista.dodajIza(17);
+    dlista.sljedeci();
+    dlista.dodajIspred(12);
+    if(dlista.prethodni())  return true;
+    return false;
+}
+
+bool pocetniElement(){
+    DvostrukaLista<int> dlista;
+    dlista.dodajIza(14);
+    dlista.dodajIspred(17);
+    dlista.dodajIza(31);
+    if(dlista.trenutni()==14) return true;
+    return false;
+}
+
+bool krajEl(){
+    DvostrukaLista<int> dlista;
+    dlista.dodajIza(66);
+    dlista.dodajIza(33);
+    if(dlista.trenutni()==66) return true;
+    return false;
+}
+
+bool dodajIspredElement(){
+    DvostrukaLista<int> dlista;
+    dlista.dodajIspred(36);
+    dlista.dodajIspred(15);
+    dlista.dodajIspred(32);
+    if(dlista.brojElemenata()==3) return true; 
+    return false;
+}
+
+bool dodajIzaElement(){
+    DvostrukaLista<int> dlista;
+    dlista.dodajIza(1);
+    dlista.dodajIza(74);
+    if(dlista.brojElemenata()==2) return true;
+    return false;
+}
+bool obrisiElement(){
+    DvostrukaLista<int> dlista;
+    dlista.dodajIspred(15);
+    dlista.dodajIza(13);
+    dlista.dodajIspred(32);
+    dlista.obrisi();
+    dlista.obrisi();
+    if(dlista.brojElemenata()==1) return true;
+    return false;
+}
+bool operatorIndeksiranja(){
+ 
+    DvostrukaLista<int> lista;
+    lista.dodajIspred(15);
+    lista.dodajIspred(17);
+    if(lista[1]==15) return true;
+    return false;
+}
+int main() {
+    
+    std::cout<<"Provjera metoda 1 - radi, 0 - ne radi.\n";
+    std::cout<<"Funkcija maksimuma: "<<maxi()<<std::endl;
+    std::cout<<"Metoda broj elemenata: "<<brojEl()<<std::endl;
+    std::cout<<"Metoda trenutni: "<<trenutniElement()<<std::endl;
+    std::cout<<"Metoda sljedeci elerment: "<<sljedeciElement()<<std::endl;
+    std::cout<<"Metoda prethodni element: "<<prethodniElement()<<std::endl;
+    std::cout<<"Metoda pocetka: "<<pocetniElement()<<std::endl;
+    std::cout<<"Metoda kraj: "<<krajEl()<<std::endl;
+    std::cout<<"Metoda dodaj ispred element: "<<dodajIspredElement()<<std::endl;
+    std::cout<<"Metoda dodaj iza element: "<<dodajIzaElement()<<std::endl;
+    std::cout<<"Metoda obrisi element: "<<obrisiElement()<<std::endl;
+    std::cout<<"Operator indeksiranja: "<<operatorIndeksiranja()<<std::endl;
+
+
+return 0;
+}
