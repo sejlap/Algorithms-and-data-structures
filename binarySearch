@@ -1,0 +1,173 @@
+#include <iostream>
+#include <vector>
+
+using namespace std;
+template <typename Tip>
+class Stek{
+struct Cvor{
+    Tip element;
+    Cvor *sljedeci;
+};
+    Cvor *pocetak;
+    int duzina;
+public:
+    Stek() : pocetak(nullptr), duzina(0) {}
+    ~Stek() { 
+        while(duzina!=0){
+            Cvor *p(pocetak);
+            pocetak=pocetak->sljedeci;
+            delete p;
+            duzina--;
+        }
+    }
+    Stek(const Stek<Tip> &s){
+        duzina=s.duzina;
+        Cvor *novi=new Cvor;
+        Cvor *pom=s.pocetak;
+        novi->element=pom->element;
+        pocetak=novi;
+        for(int i=0; i<s.duzina-1; i++){
+            novi->sljedeci=new Cvor;
+            pom=pom->sljedeci;
+            novi->element=pom->element;
+        }
+    }
+    
+    Stek &operator =(const Stek &s){
+        if(&s==this) return *this;
+        while(duzina!=0){
+            Cvor *pom=pocetak;
+            pocetak=pocetak->sljedeci;
+            delete pom;
+            duzina--;
+        }
+        duzina=s.duzina;
+        Cvor *novi=new Cvor;
+        Cvor *pomocna=s.pocetak;
+        novi->element=pomocna->element;
+        pocetak=novi;
+        for(int i=0; i<s.duzina-1; i++){
+            novi->sljedeci=new Cvor;
+            novi=novi->sljedeci;
+            pomocna=pomocna->sljedeci;
+            novi->element=pomocna->element;
+        }
+        return *this;
+    }
+    
+    int brojElemenata() const{
+        return duzina;
+    }
+    Tip &vrh(){
+        if(duzina==0) throw("Stek je prazan");
+        return pocetak->element;
+    }
+    
+    void stavi(const Tip &el){
+        Cvor *pom=new Cvor;
+        pom->element=el;
+        pom->sljedeci=pocetak;
+        pocetak=pom;
+        duzina++;
+    }
+    
+    Tip skini(){
+        if(duzina==0) throw ("Stek je prazan");
+        Tip el(pocetak->element);
+        Cvor *p=pocetak;
+        pocetak=pocetak->sljedeci;
+        delete p;
+        duzina--;
+        return el;
+    }
+    
+    void brisi(){
+        while(duzina!=0){
+            Cvor *p(pocetak);
+            pocetak=pocetak->sljedeci;
+            delete p;
+            duzina--;
+        }
+    }
+
+};
+
+void pretraga(Stek<std::vector<int>> &s, int trazeni){
+    if(s.brojElemenata()==0) {
+        std::cout<<"Nema elementa";
+        return;
+    }
+    int duzina=s.vrh().size();
+    if(duzina!=0){
+        int dno=0;
+        int vrh=duzina-1;
+        int srednji;
+        while(vrh>=dno){
+            srednji = (vrh+dno)/2;
+            if(s.vrh()[srednji] == trazeni){
+                 std::cout<<srednji<<" "<<s.brojElemenata()-1;
+                 return;
+             }
+             else if(s.vrh()[srednji] > trazeni)   vrh=srednji-1;
+             else dno=srednji+1;
+        }
+    }
+        std::vector<int> v;
+        v=s.skini();
+        pretraga(s,trazeni);
+        s.stavi(v);
+}
+
+
+void Pretraga1(){
+    Stek<vector<int>> s;
+    vector<int> a;
+    a.push_back(15); a.push_back(25); a.push_back(35);
+    vector<int>b;
+    b.push_back(14); b.push_back(35); b.push_back(17);
+    vector<int>c;
+    c.push_back(18); c.push_back(36); c.push_back(23);
+    s.stavi(a);
+    s.stavi(b);
+    s.stavi(c);
+    pretraga(s,14);
+}
+void Pretraga2(){
+    Stek<vector<int>>stek;
+    vector<int> b;
+    for(int i=0; i<15; i++)
+     b.push_back(i);
+    vector<int> c;
+    for(int i=0; i<10; i++)
+      c.push_back(i);
+    vector<int>d;
+    for(int i=0; i<30; i++)
+      d.push_back(i);
+    stek.stavi(b);
+    stek.stavi(c);
+    stek.stavi(d);
+    pretraga(stek,7);
+}
+
+
+void Pretraga3(){
+    Stek<vector<int>> s;
+    vector<int> a;
+    for(int i=0; i<50000; i++)
+    a.push_back(i);
+    vector<int>c;
+    for(int i=0; i<100000; i++)
+    c.push_back(i);
+    vector<int>b;
+    b.push_back(235697); b.push_back(7896541); 
+    b.push_back(147852); 
+    b.push_back(1478963);
+    b.push_back(147852);
+    pretraga(s,25000);
+    
+}
+
+int main() {
+
+return 0;
+}
