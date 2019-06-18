@@ -1,0 +1,509 @@
+#include <iostream>
+#include <fstream>
+#include <stdlib.h>
+using namespace std;
+
+template <typename TipKljuca, typename TipVrijednosti>
+class Mapa {
+
+public:
+
+    Mapa() {}
+    virtual ~Mapa() {}
+    virtual int brojElemenata() const=0;
+    virtual TipVrijednosti operator[](const TipKljuca &kljuc) const=0;
+    virtual TipVrijednosti &operator[](const TipKljuca &kljuc)=0;
+    virtual void obrisi()=0;
+    virtual void obrisi(const TipKljuca &kljuc)=0;
+};
+template <typename TipKljuca, typename TipVrijednosti>
+class NizMapa : public Mapa<TipKljuca,TipVrijednosti> {
+int duzina;
+int kapacitet;
+std::pair<TipKljuca, TipVrijednosti> **nizMapa;
+
+public:
+    NizMapa(){
+        duzina=0;
+        kapacitet=10000;
+        nizMapa = new std::pair<TipKljuca,TipVrijednosti> *[kapacitet] {};
+     
+    }
+    ~NizMapa(){
+        for(int i=0; i<duzina; i++)
+        delete nizMapa[i];
+        delete [] nizMapa;
+    }
+    NizMapa(const NizMapa &n) : duzina(n.duzina), kapacitet(n.kapacitet),nizMapa(nullptr){
+      nizMapa= new std::pair<TipKljuca, TipVrijednosti> *[kapacitet];
+      try{
+          for(int i=0; i<duzina; i++)
+              nizMapa[i]= new std::pair<TipKljuca,TipVrijednosti> (*n.nizMapa[i]);
+      }
+      catch(...){
+          for(int i=0; i<duzina; i++)
+          delete nizMapa[i];
+          delete []nizMapa;
+      }
+      
+    }
+    NizMapa &operator=(const NizMapa &n){
+        if(&n==this) return *this;
+        for(int i=0; i<duzina; i++) delete nizMapa[i];
+        delete []nizMapa;
+        duzina=n.duzina;
+        kapacitet=n.kapacitet;
+        nizMapa=nullptr;
+        nizMapa= new std::pair<TipKljuca, TipVrijednosti> *[kapacitet]{};
+        try{
+            for(int i=0; i<duzina; i++)
+                nizMapa[i]= new std::pair<TipKljuca,TipVrijednosti> (*n.nizMapa[i]);
+        }
+        catch(...){
+            for(int i=0; i<duzina; i++)
+            delete nizMapa[i];
+            delete []nizMapa;
+        }
+        return *this;
+    }
+    int brojElemenata() const { return duzina; }
+    TipVrijednosti operator[](const TipKljuca &kljuc)const {
+        int ima=0, noviindeks=0;
+        for(int i=0; i<duzina; i++){
+            if(nizMapa[i]->first==kljuc){
+                ima=1;
+                noviindeks=i;
+                break;
+            }
+            else ima=0;
+        }
+        if(ima) return nizMapa[noviindeks]->second;
+        else return TipVrijednosti();
+    }
+    TipVrijednosti &operator[](const TipKljuca &kljuc){
+        int ima=0,noviindeks=0;
+        for(int i=0; i<duzina; i++){
+            if(nizMapa[i]->first==kljuc){
+                ima=1;
+                noviindeks=i;
+                break;
+            }
+            else ima=0;
+        }
+        if(ima)  return nizMapa[noviindeks]->second;
+        else {
+            int i=0;
+            while( nizMapa[i]!=nullptr && i<kapacitet) i++;
+            nizMapa[i] = new std::pair<TipKljuca, TipVrijednosti>;
+            nizMapa[i]->first=kljuc;
+            duzina++;
+            return nizMapa[i]->second;
+            }
+    }
+    void obrisi(){
+        for(int i=0; i<duzina; i++){
+             delete nizMapa[i];
+             nizMapa[i]=nullptr;
+        }
+        duzina=0;
+    }
+    
+    void obrisi(const TipKljuca &kljuc){
+        int ima=0,indeks=0;
+        for(int i=0; i<duzina; i++){
+            if(nizMapa[i]!=nullptr && nizMapa[i]->first==kljuc){
+                ima=1;
+                indeks=i;
+            }
+        }
+        if(ima){
+            delete nizMapa[indeks];
+            nizMapa[indeks]=nullptr;
+            for(int k=indeks; k<duzina; k++)
+            nizMapa[k]=nizMapa[k+1];
+            duzina--;
+        }
+    }
+};
+
+
+template <typename TipKljuca, typename TipVrijednosti>
+class BSCvor{
+public:
+    BSCvor<TipKljuca,TipVrijednosti> *lijevo{};
+    BSCvor<TipKljuca,TipVrijednosti> *desno{};
+    BSCvor<TipKljuca,TipVrijednosti> *roditelj{};
+    std::pair<TipKljuca,TipVrijednosti> vrijednost;
+    BSCvor() : lijevo(nullptr),desno(nullptr),roditelj(nullptr) {}
+    BSCvor(BSCvor<TipKljuca,TipVrijednosti> lijevonovo, BSCvor<TipKljuca,TipVrijednosti> desnonovo,
+            BSCvor<TipKljuca,TipVrijednosti> roditeljnovi,std::pair<TipKljuca,TipVrijednosti> vrijednostnova);
+};
+
+template <typename TipKljuca, typename TipVrijednosti>
+class BinStabloMapa : public Mapa<TipKljuca, TipVrijednosti>{
+BSCvor <TipKljuca, TipVrijednosti> *korijen{};
+int duzina;
+public:
+    void rekurzivnoBrisanje(BSCvor<TipKljuca, TipVrijednosti> *pomocni){
+        if(pomocni==nullptr) return;
+        rekurzivnoBrisanje(pomocni->lijevo);
+        rekurzivnoBrisanje(pomocni->desno);
+        delete pomocni;
+        pomocni=nullptr;
+    }
+    void kopiranje(BSCvor <TipKljuca,TipVrijednosti> *x, BSCvor<TipKljuca,TipVrijednosti> *y){
+        if(y==nullptr) return;
+        if(y->desno!=nullptr){
+            x->desno= new BSCvor<TipKljuca, TipVrijednosti>;
+            (x->desno)->roditelj = x;
+            (x->desno)->vrijednost = (y->desno)->vrijednost;
+            kopiranje(x->desno,y->desno);
+            kopiranje(x->lijevo,y->lijevo);
+        }
+        if(y->lijevo!=nullptr){
+            x->lijevo=new BSCvor<TipKljuca, TipVrijednosti>;
+            (x->lijevo)->roditelj=x;
+            (x->lijevo)->vrijednost=(y->lijevo)->vrijednost;
+            kopiranje(x->desno,y->desno);
+            kopiranje(x->lijevo,y->lijevo);
+        }
+        return;
+    }
+    BinStabloMapa() {duzina=0;  }
+    ~BinStabloMapa() {
+       obrisi();
+    }
+    BinStabloMapa(const BinStabloMapa &b){
+        if(b.korijen!=nullptr){
+            korijen=new BSCvor<TipKljuca,TipVrijednosti>;
+            korijen->vrijednost=b.korijen->vrijednost;
+            kopiranje(korijen->lijevo,b.korijen->lijevo);
+            kopiranje(korijen->desno,b.korijen->desno);
+        }
+        duzina=b.duzina;
+    }
+            
+    BinStabloMapa &operator=(const BinStabloMapa &b){
+        if(&b == this) return *this;
+        obrisi();
+        duzina=b.duzina;
+        if(b.korijen!=nullptr){
+            korijen= new BSCvor<TipKljuca,TipVrijednosti>;
+            korijen->vrijednost = b.korijen->vrijednost;
+            kopiranje(korijen->lijevo,b.korijen->lijevo);
+            kopiranje(korijen->desno, b.korijen->desno);
+        }
+        duzina=b.duzina;
+        return *this;
+    }
+    
+    int brojElemenata() const { return duzina; }
+    
+    void obrisi(){
+       rekurzivnoBrisanje(korijen);
+       duzina=0;
+    }
+    
+    TipVrijednosti operator[](const TipKljuca &kljuc) const{
+        if(korijen==nullptr || duzina==0 ) return TipVrijednosti();
+        else{
+            auto pomocni=korijen;
+            while(pomocni!=nullptr && pomocni->vrijednost.first!=kljuc){
+                if(pomocni->vrijednost.first < kljuc) 
+                pomocni=pomocni->lijevo; //ako je manji bit ce lijevo
+                else pomocni=pomocni->desno;
+            }
+            if(pomocni!=nullptr) return pomocni->vrijednost.second;
+        }
+        return TipVrijednosti();
+    }
+    
+    TipVrijednosti &operator[](const TipKljuca &kljuc){
+            if(korijen==nullptr || duzina==0){
+                korijen=new BSCvor<TipKljuca, TipVrijednosti>();
+                korijen->vrijednost.first=kljuc;
+                duzina++;
+                return korijen->vrijednost.second;
+            }
+            BSCvor<TipKljuca,TipVrijednosti> *roditeljp=nullptr, *pom=korijen;
+            while(pom!=nullptr){
+                if(pom->vrijednost.first<kljuc){
+                    if(!pom->lijevo) roditeljp=pom;
+                    pom=pom->lijevo;
+                }
+                else if(pom->vrijednost.first > kljuc){
+                    if(!pom->desno) roditeljp=pom;
+                    pom=pom->desno;
+                }
+                else break;
+            }
+            if(pom&& pom->vrijednost.first == kljuc) return pom->vrijednost.second;
+            pom= new BSCvor<TipKljuca, TipVrijednosti>;
+            duzina++;
+            pom->vrijednost.first = kljuc;
+            pom->roditelj = roditeljp;
+            if(roditeljp->lijevo) roditeljp->desno=pom;
+            else roditeljp->lijevo=pom;
+            return pom->vrijednost.second;
+    }
+    void obrisi(const TipKljuca &kljuc){
+        if(duzina==0) return;
+        BSCvor<TipKljuca,TipVrijednosti> *p=korijen, *q=nullptr;
+        BSCvor<TipKljuca,TipVrijednosti> *tmp=nullptr, *pp=nullptr, *rp=nullptr;
+        while(p!=nullptr && kljuc!=p->vrijednost.first){
+            q=p;
+            if(kljuc>p->vrijednost.first) p=p->lijevo;
+            else p=p->desno;
+        }
+        if(p==nullptr) return;
+        if(p->lijevo==nullptr) rp=p->desno; 
+        else {
+                if(p->desno==nullptr) rp=p->lijevo;
+       else{
+            pp=p;
+            rp=p->lijevo;
+            tmp=rp->desno;
+            while(tmp!=nullptr){
+                pp=rp;
+                rp=tmp;
+                tmp=rp->desno;
+            }
+                if(pp!=p){
+                pp->desno=rp->lijevo;
+                rp->lijevo=p->lijevo;
+            }
+            
+            rp->desno=p->desno;
+            }
+        }
+        if(q==nullptr)
+            korijen=rp;
+        else {
+            if(p==q->lijevo)
+                 q->lijevo=rp;
+            else q->desno=rp;
+        }
+        delete p;
+        duzina--;
+    }
+};
+
+void genrisiSlucajne(std::string filename, int vel){
+    srand(time(0));
+    std::ofstream ucitaj(filename);
+    
+    for(int i=0; i<vel; i++)
+    ucitaj<<rand()<<" ";
+    ucitaj.close();
+}
+
+template <typename TipKljuca, typename TipVrijednosti>
+class HashMapa : public Mapa<TipKljuca, TipVrijednosti> {
+    TipVrijednosti *niz;
+    TipKljuca *nizkljuceva;
+    int velicina;
+    int kapacitet;
+    unsigned int (*poknafunkciju)(TipKljuca, unsigned int);
+    
+public:
+   
+    HashMapa(): velicina(0), kapacitet(20000), poknafunkciju(nullptr){
+        nizkljuceva = new TipKljuca[kapacitet];
+        niz = new TipVrijednosti [kapacitet];
+        for(int i=0; i<kapacitet; i++){
+            nizkljuceva[i]=TipKljuca();
+            niz[i]=TipVrijednosti();
+        }
+    }
+    ~HashMapa(){
+        delete []nizkljuceva;
+        delete [] niz;
+        velicina=0;
+        poknafunkciju=nullptr;
+    }
+    HashMapa(const HashMapa &h){
+        poknafunkciju=h.poknafunkciju;
+        velicina=h.velicina;
+        kapacitet=h.kapacitet;
+        nizkljuceva= new TipKljuca[kapacitet];
+        niz = new TipVrijednosti[kapacitet];
+        
+        for( int i=0; i<kapacitet; i++){
+            nizkljuceva[i] = h.nizkljuceva[i];
+            niz[i]=h.niz[i];
+        }
+    }
+    
+    HashMapa &operator= (const HashMapa &h){
+        if(&h==this) return *this;
+        delete[] nizkljuceva;
+        delete[] niz;
+        nizkljuceva=nullptr; niz = nullptr;
+        kapacitet = h.kapacitet; 
+        velicina=h.velicina;
+        poknafunkciju = h.poknafunkciju;
+        nizkljuceva= new TipKljuca[kapacitet];
+        niz = new TipVrijednosti[kapacitet];
+        for(int i=0; i<kapacitet; i++){
+            nizkljuceva[i]=h.nizkljuceva[i];
+            niz[i]=h.niz[i];
+        }
+        return *this;
+    }
+
+    int brojElemenata() const
+    {
+        return velicina;
+    }
+    void obrisi()
+    {
+        delete [] niz;
+        delete [] nizkljuceva;
+        velicina=0;
+        nizkljuceva= new TipKljuca[kapacitet];
+        niz = new TipVrijednosti[kapacitet];
+    }
+
+    void obrisi(const TipKljuca &kljuc)
+    {
+    
+        unsigned int indeks=poknafunkciju(kljuc,kapacitet);
+        if(nizkljuceva[indeks] ==TipKljuca()) return; 
+           else if(nizkljuceva[indeks]==kljuc){
+            niz[indeks]=TipVrijednosti();
+            nizkljuceva[indeks]=TipKljuca();
+            velicina--;
+        }
+        else{
+            while(1){
+                if(indeks==kapacitet-1)  indeks=0;
+                if(nizkljuceva[indeks]==kljuc){
+                    niz[indeks]=TipVrijednosti();
+                    nizkljuceva[indeks]=-2;
+                    velicina--;
+                    return;
+                }
+            }
+        }
+        return;
+    }
+ 
+    TipVrijednosti operator[](const TipKljuca &k) const
+    {
+        if(poknafunkciju==nullptr) throw("Hash funkcija nije definisana");
+        unsigned int indeks=poknafunkciju(k,kapacitet);
+    
+        if(nizkljuceva[indeks]==TipKljuca()) return TipVrijednosti();
+        else if(nizkljuceva[indeks] == k) return niz[indeks];
+        else{
+            while(nizkljuceva[indeks]!=k){
+                if(indeks==kapacitet-1) indeks=0;
+                indeks++;
+            }
+        }
+        return niz[indeks];
+    }
+
+    TipVrijednosti &operator[](const TipKljuca &kljuc)
+    {
+        if(poknafunkciju==nullptr) throw("Hash funkcija nije definisana");
+        unsigned int indeks=poknafunkciju(kljuc,kapacitet);
+        if(nizkljuceva[indeks] == TipKljuca()){
+            nizkljuceva[indeks]=kljuc;
+            velicina++;
+            return niz[indeks];
+        }
+        else if(nizkljuceva[indeks] == kljuc) return niz[indeks];
+        else {
+            if(indeks==kapacitet-1) indeks=0;
+            while(nizkljuceva[indeks] != TipKljuca()) {
+                if(nizkljuceva[indeks] == kljuc) return niz[indeks];
+                if(indeks==kapacitet-1) indeks=0;
+                indeks++;
+            }
+        }
+            nizkljuceva[indeks]=kljuc;
+            velicina++;
+            return niz[indeks];
+    }
+
+    void definisiHashFunkciju(unsigned int (*pom)(TipKljuca, unsigned int))
+    {
+        poknafunkciju=pom;
+    }
+};
+
+#include <string>
+unsigned int h(int ulaz, unsigned int max) {
+	unsigned int suma=55; 
+		suma = suma*33 + ulaz;
+	return suma % max;
+}
+
+
+int main()
+{
+    
+    double t1 = clock();
+    NizMapa<int, int> nizmapa;
+    for(int i=0; i<1000; i++)
+    nizmapa[i]=rand();
+    double t2 = clock();
+    double t=(t2-t1)/(CLOCKS_PER_SEC/1000);
+    std::cout<<"Vrijeme dodavanja elemenata u Nizmapu je: "<<t<<" ms.\n";
+    
+    t1=clock();
+    BinStabloMapa<int, int> stablo;
+    for(int i=0; i<1000; i++) stablo[i]=rand();
+    t2=clock();
+    t=(t2-t1)/(CLOCKS_PER_SEC/1000);
+    std::cout<<"Vrijeme dodavanja elemenata u BinstabloMapa je: "<<t<<" ms.\n";
+   
+   t1=clock();
+   HashMapa<int, int> hashmapa;
+   hashmapa.definisiHashFunkciju(h);
+   for(int i=0; i<1000; i++)  hashmapa[i]=rand();
+   t2=clock();
+   t=(t2-t1)/(CLOCKS_PER_SEC/1000);
+   std::cout<<"Vrijeme dodavanja elemenata u hashmapa je: "<<t<< " ms.\n";
+   
+   int n=0;
+   t1=clock();
+   for(int i=0; i<1000; i++) n=nizmapa[i];
+   t2=clock();
+   t=(t2-t1)/(CLOCKS_PER_SEC/1000);
+   std::cout<<"Vrijeme pristupa elementima u Nizmapa je: "<<t<<" ms.\n";
+   
+   t1=clock();
+   for(int i=0; i<1000; i++) n=stablo[i];
+   t2=clock();
+   t=(t2-t1)/(CLOCKS_PER_SEC/1000);
+   std::cout<<"Vrijeme pristupa elementima u BinStabloMapa je: "<<t<<" ms.\n";
+   
+   t1=clock();
+   for(int i=0; i<1000; i++) n=hashmapa[i];
+   t2=clock();
+   t=(t2-t1) /(CLOCKS_PER_SEC/1000);
+   std::cout<<"Vrijeme pristupa elementima u HashMapa je: "<<t<<" ms.\n";
+   
+   t1=clock();
+   for(int i=0; i<1000; i++) nizmapa.obrisi(500);
+   t2=clock();
+   t=(t2-t1)/(CLOCKS_PER_SEC/1000);
+   std::cout<<"Vrijeme brisanja elemenata u Nizmapa je: "<<t<<" ms.\n";
+   
+   t1=clock();
+   for(int i=0; i<1000; i++) stablo.obrisi(500);
+   t2=clock();
+   t=(t2-t1)/(CLOCKS_PER_SEC/1000);
+   std::cout<<"Vrijeme brisanja elemenata u BinStabloMapa je: "<<t<<" ms.\n";
+   
+   t1=clock();
+   for(int i=0; i<1000; i++) hashmapa.obrisi(500);
+   t2=clock();
+   t=(t2-t1)/(CLOCKS_PER_SEC/1000);
+   std::cout<<"Vrijeme brisanja elemenata u HashMapa je: "<<t<<" ms.\n";
+   
+   
+    return 0;
+}
